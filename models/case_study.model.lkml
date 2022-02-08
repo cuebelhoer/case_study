@@ -2,6 +2,7 @@ connection: "bq_thelook"
 
 # include all the views
 include: "/views/**/*.view"
+# include: "/dashboards/**/*.dashboard.lookml"
 
 datagroup: case_study_default_datagroup {
   # sql_trigger: SELECT MAX(id) FROM etl_log;;
