@@ -85,10 +85,25 @@ view: users {
     sql: ${TABLE}.zip ;;
   }
 
-  measure: count {
+  measure: avg_count {
+    type: average
+    sql: ${} ;;
+  }
+
+  measure: count_hard_coded {
     type: count
     drill_fields: [id, last_name, first_name, events.count, order_items.count]
+    html:
+    {% if value > 1 %}
+    <div style="background-color: rgba(200,35,25,{{value}}); font-size:150%; text-align:center">{{rendered_value}}</div>
+    {% elsif value > 0 %}
+    <div style="background-color: rgba(25,35,150,{{value}}); font-size:150%; text-align:center">{{rendered_value}}</div>
+    {% else %}
+    <div style="background-color: rgba(25,35,150,0.99); font-size:150%; text-align:center">{{rendered_value}}</div>
+    {% endif %}
+    ;;
   }
+
 
   dimension: age_tier {
     label: "Age Buckets"
@@ -165,12 +180,4 @@ view: users {
     type: count_distinct
     sql: ${latitude_short};;
   }
-
-
-  # dimension: num_orders_tier {
-  #   label: "Number of Orders Buckets"
-  #   tiers: [1, 2, 3, 6, 10]
-  #   sql: ${num_orders} ;;
-  # }
-
 }

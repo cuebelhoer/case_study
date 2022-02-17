@@ -9,6 +9,35 @@ view: order_items {
     sql: ${TABLE}.id ;;
   }
 
+  parameter: metric_selector {
+    type: string
+    allowed_value: {
+      label: "first"
+      value: "first"
+    }
+    allowed_value: {
+      label: "last"
+      value: "last"
+    }
+  }
+
+  measure: metric {
+    label_from_parameter: metric_selector
+    type: number
+    value_format: "0.00" #Removed percentage because when adding visits this will not work
+    sql:
+      CASE
+      WHEN {% parameter metric_selector %} = 'first' THEN ${first_order_date}
+      WHEN {% parameter metric_selector %} = 'last' THEN ${latest_order_date}
+      ELSE NULL
+    END ;;
+
+    }
+
+
+
+
+
   dimension_group: created {
     type: time
     timeframes: [
@@ -113,6 +142,12 @@ view: order_items {
     drill_fields: [detail*]
   }
 
+  measure: count_country_UK {
+    type: count
+    drill_fields: [detail*]
+    filters: [users.country: "UK"]
+  }
+
   measure: total_sales {
     label: "total_sale"
     description: "total_sale"
@@ -164,6 +199,15 @@ view: order_items {
     type: number
     sql: ${total_gross_margin_amount}/NULLIF(${total_gross_revenue},0) ;;
     value_format_name: percent_2
+    html:
+    {% if value > 0.5 %}
+    <div style="background-color: rgba(200,35,25,{{value}}); font-size:150%; text-align:center">{{rendered_value}}</div>
+    {% elsif value > 0 %}
+    <div style="background-color: rgba(25,35,150,{{value}}); font-size:150%; text-align:center">{{rendered_value}}</div>
+    {% else %}
+    <div style="background-color: rgba(25,35,150,0.99); font-size:150%; text-align:center">{{rendered_value}}</div>
+    {% endif %}
+    ;;
   }
 
   measure: num_items_returned {
@@ -267,6 +311,108 @@ view: order_items {
     type: string
     html: <a href="https://drive.google.com/uc?export=view&id=XXX"><img src="https://drive.google.com/uc?export=view&id=XXX" style="width: 500px; max-width: 100%; height: auto" title="Click for the larger version." /></a> ;;
   }
+
+  measure: UK_country_percent_gauge {
+    type: number
+    sql: 100.0*${count_country_UK}/nullif(${count},0) ;;
+    value_format: "#.0\%"
+    html:   <img src="https://chart.googleapis.com/chart?chs=400x250&cht=gom&chma=10,0,0,0&chxt=y&chco=635189,B1A8C4,1EA8DF,8ED3EF&chf=bg,s,FFFFFF00&chl={{ rendered_value }}&chd=t:{{ value }}">;;
+
+  }
+
+  measure: total_sales_today {
+    type: sum
+    sql: ${sale_price} ;;
+    filters: [created_date: "today"]
+    value_format_name: usd_0
+  }
+
+  measure: total_sales_one_year_ago {
+    type: sum
+    sql: ${sale_price} ;;
+    filters: [created_date: "1 year ago"]
+    value_format_name: usd_0
+  }
+
+  measure: total_sales_one_week_ago {
+    type: sum
+    sql: ${sale_price} ;;
+    filters: [created_date: "1 week ago"]
+    value_format_name: usd_0
+  }
+
+  measure: comparison_measure_second {
+    type: number
+    label: "Total Sales - today, last week, last year"
+    value_format_name: usd_0
+    sql:  ${total_sales_one_year_ago}   ;;
+    html:
+    <div>
+    {% if total_sales_one_week_ago._value < 0 %}
+    <p style="color: #9FBF7D">▲ {{ total_sales_one_week_ago._rendered_value }}
+    {% elsif total_sales_one_week_ago._value > 0 %}
+    <p style="color: #990000">▼ {{ total_sales_one_week_ago._rendered_value }}
+    {% elsif total_sales_one_week_ago._value == 0 %}
+    <p style="color: #BABCBE">{{ total_sales_one_week_ago._rendered_value }}
+    {% else %}
+    <p style="color: #BABCBE">∅
+    {% endif %}
+    WoW </p>
+    </div>
+    <div>
+    {% if value > 0 %}
+    <p style="color: #9FBF7D">▲ {{ rendered_value }}
+    {% elsif value < 0 %}
+    <p style="color: #990000">▼ {{ rendered_value }}
+    {% elsif value == 0 %}
+    <p style="color: #BABCBE">{{ rendered_value }}
+    {% else %}
+    <p style="color: #BABCBE">∅
+    {% endif %}
+    YoY </p>
+    </div> ;;
+  }
+
+
+
+  measure: comparison_measure {
+    type: number
+    label: "Total Sales, total customers comparison"
+    value_format_name: percent_1
+    sql:  SAFE_DIVIDE(${total_sales}, ${total_customers}) -1   ;;
+    html:
+    <div>
+    {% if total_sales._value < 0 %}
+    <p style="color: #9FBF7D">▲ {{ total_sales._rendered_value }}
+    {% elsif total_sales._value > 0 %}
+    <p style="color: #990000">▼ {{ total_sales._rendered_value }}
+    {% elsif total_sales._value == 0 %}
+    <p style="color: #BABCBE">{{ total_sales._rendered_value }}
+    {% else %}
+    <p style="color: #BABCBE">∅
+    {% endif %}
+    Total Sales </p>
+    </div>
+    <div>
+    {% if value > 0 %}
+    <p style="color: #9FBF7D">▲ {{ rendered_value }}
+    {% elsif value < 0 %}
+    <p style="color: #990000">▼ {{ rendered_value }}
+    {% elsif value == 0 %}
+    <p style="color: #BABCBE">{{ rendered_value }}
+    {% else %}
+    <p style="color: #BABCBE">∅
+    {% endif %}
+    Total Sales per customer </p>
+    </div>  ;;
+    }
+
+
+
+
+
+
+
 
   # ----- Sets of fields for drilling ------
   set: detail {

@@ -1,11 +1,12 @@
 connection: "bq_thelook"
 
+# this is a change
 # include all the views
 include: "/views/**/*.view"
 # include: "/dashboards/**/*.dashboard.lookml"
 
 datagroup: case_study_default_datagroup {
-  # sql_trigger: SELECT MAX(id) FROM etl_log;;
+  sql_trigger: SELECT 1;;
   max_cache_age: "1 hour"
 }
 
@@ -16,17 +17,9 @@ datagroup: 24_default_datagroup {
 
 persist_with: case_study_default_datagroup
 
-explore: distribution_centers {}
 
-explore: user_facts {}
-
-explore: users {
-}
-
-explore: inventory_items {}
-
-explore: events {
-}
+explore: product_sparklines {}
+explore: product_purchase_per_user {}
 
 explore: products {
   join: product_facts {
@@ -38,6 +31,7 @@ explore: products {
 }
 
 explore: order_items {
+  join: buttons_nav {}
   join: users {
     type: left_outer
     sql_on: ${order_items.user_id} = ${users.id} ;;
@@ -67,5 +61,32 @@ explore: order_items {
     sql_on: ${users.id} = ${user_facts.id} ;;
     relationship: many_to_one
   }
+
+# explore: product_purchase_per_user{}
+
+# explore: orders {
+#   from: order_items
+#   always_filter: {
+#     filters: [orders.status: "Returned"]
+#   }
+#   aggregate_table: orders_per_day {
+#     query: {
+#       dimensions: [orders.created_date]
+#       measures: [orders.count]
+#       filters: [orders.status: "Returned"]
+#     }
+#     materialization: {
+#       datagroup_trigger: case_study_default_datagroup
+#     }
+#   }
+#   aggregate_table: orders_per_month {
+#     query: {
+#       dimensions: [orders.created_month]
+#       measures: [orders.count]
+#     }
+#     materialization: {
+#       datagroup_trigger: case_study_default_datagroup
+#     }
+#   }
+
 }
-explore: product_purchase_per_user{}
