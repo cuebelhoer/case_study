@@ -17,6 +17,4 @@ datagroup: 24_default_datagroup {
   max_cache_age: "24 hour"
 }
 
-
-
 persist_with: case_study_default_datagroup
