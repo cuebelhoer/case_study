@@ -1,4 +1,10 @@
 view: order_items {
+
+  filter: test {
+    type: string
+    suggest_dimension: status
+  }
+
   sql_table_name: `thelook.order_items`
     ;;
   drill_fields: [id]
@@ -9,34 +15,33 @@ view: order_items {
     sql: ${TABLE}.id ;;
   }
 
-  parameter: metric_selector {
-    type: string
-    allowed_value: {
-      label: "first"
-      value: "first"
-    }
-    allowed_value: {
-      label: "last"
-      value: "last"
-    }
+  dimension: currency_symbol{
+    # hidden:  yes
+    sql: CASE
+          WHEN ${status} = 'Returned' THEN '$'
+          WHEN ${status} = 'Cancelled' THEN '£'
+          ELSE' '
+        END ;;
   }
 
-  measure: metric {
-    label_from_parameter: metric_selector
-    type: number
-    value_format: "0.00" #Removed percentage because when adding visits this will not work
-    sql:
-      CASE
-      WHEN {% parameter metric_selector %} = 'first' THEN ${first_order_date}
-      WHEN {% parameter metric_selector %} = 'last' THEN ${latest_order_date}
-      ELSE NULL
-    END ;;
-
-    }
-
+  measure: formatted_amount {
+    type: sum
+    # value_format_name: decimal_2
+    sql: ${sale_price} ;;
+    # html: {{ currency_symbol._value }}{{ rendered_value }};;
+    html: {% if status._value == "Returned" %}
+      <div style="number-format='$#,##0.00' ">{{ rendered_value }}</div>
+      {% else %}
+      <div style="number-format='£#,##0.00'">{{ rendered_value }}</div>
+      {% endif %};;
+  }
 
 
-
+  measure: concat {
+    type: string
+    sql: concat(${currency_symbol}, round(${avg_sale_price},0)) ;;
+    value_format: "0"
+  }
 
   dimension_group: created {
     type: time
@@ -286,7 +291,7 @@ view: order_items {
     sql: ${users.country} ;;
     link: {
       label: "Search Google for Country/Brand"
-      url: "https://www.google.com/search?q= {{ value }}"
+      url: "https://www.google.com/search?q= {{ country_drill_db._value }}"
       icon_url: "https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg"
     }
   }
@@ -409,8 +414,55 @@ view: order_items {
 
 
 
+#### CASE WHEN Dimensions
 
+# Solution #1 with alphabetical order
+  dimension: semester {
+    sql: CASE
+        WHEN TIMESTAMP(${created_date}) = 0 THEN 'Fall'
+        WHEN ${status} = 1 THEN 'Winter'
+        WHEN ${status} = 2 THEN 'Spring'
+        ELSE 'Summer'
+        END ;;
+  }
 
+# Solution #2 defined order
+
+  dimension: semester_native {
+    case: {
+      when: {
+        sql: ${status}  = 0 ;;
+        label: "Winter"
+      }
+      when: {
+        sql: ${TABLE}.status = 1 ;;
+        label: "Fall"
+      }
+      when: {
+        sql: ${TABLE}.status = 2 ;;
+        label: "Spring"
+      }
+      when: {
+        sql: ${TABLE}.status = 3 ;;
+        label: "Summer"
+      }
+    }
+  }
+
+# Solution #3: liquid syntax
+
+parameter: metric_selector {
+  label: "Metric"
+  type: unquoted
+  allowed_value: {
+    label: "Avg"
+    value: "avg"
+  }
+  allowed_value: {
+    label: "Total"
+    value: "total"
+  }
+}
 
 
 

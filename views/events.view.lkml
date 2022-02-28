@@ -3,6 +3,39 @@ view: events {
     ;;
   drill_fields: [id]
 
+  parameter: hide {
+    type: string
+    allowed_value: {
+      label: "First"
+      value: "first"
+    }
+    allowed_value: {
+      label: "Second"
+      value: "second"
+    }
+  }
+
+  # measure: count_experiment {
+  #   type: number
+  #   sql: {% if hide == 'Yes' %} 'write this' {% else %} ${count} {% endif %};;
+  # }
+
+
+  measure: count_experiment {
+    type: number
+    sql: CASE WHEN {% parameter hide %} = 'first' THEN null
+              WHEN {% parameter hide %} = 'second' THEN ${count}
+        END ;;
+  }
+
+
+  measure: count_experiment_two {
+    type: number
+    sql: CASE WHEN {% parameter hide %} = 'first' THEN ${count}
+              WHEN {% parameter hide %} = 'second' THEN null
+        END ;;
+  }
+
   dimension: id {
     primary_key: yes
     type: number
